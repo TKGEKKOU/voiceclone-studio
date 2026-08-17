@@ -1,0 +1,81 @@
+{
+  "stt_provider_id": {
+    "type": "string",
+    "description": "\u8bed\u97f3\u8bc6\u522b Provider",
+    "hint": "\u7528\u4e8e\u4e3a\u8bad\u7ec3\u97f3\u9891\u751f\u6210\u6587\u5b57\u6807\u6ce8\u3002",
+    "default": "",
+    "_special": "select_provider_stt"
+  },
+  "remote_mode": {"type": "string", "description": "运行模式", "hint": "远程模式将推理请求转发到另一台电脑上的 VoiceClone Studio。", "default": "local", "options": ["local", "remote"]},
+  "remote_studio": {
+    "type": "object", "description": "远程 VoiceClone Studio",
+    "items": {
+      "base_url": {"type": "string", "description": "Studio 地址", "default": ""},
+      "token": {"type": "string", "description": "Studio Token", "default": ""},
+      "timeout_seconds": {"type": "int", "description": "远程请求超时（秒）", "default": 300}
+    }
+  },
+  "ffmpeg_path": {
+    "type": "string",
+    "description": "FFmpeg \u53ef\u6267\u884c\u6587\u4ef6\u8def\u5f84\uff08\u53ef\u9009\uff09",
+    "hint": "\u7559\u7a7a\u65f6\u81ea\u52a8\u67e5\u627e\u7cfb\u7edf FFmpeg\uff0c\u627e\u4e0d\u5230\u65f6\u53ef\u4ee5\u5728\u63d2\u4ef6\u9875\u9762\u4e0b\u8f7d\u3002\u4e5f\u53ef\u586b\u5199\u672c\u5730 ffmpeg.exe \u5b8c\u6574\u8def\u5f84\u3002",
+    "default": ""
+  },
+  "ffmpeg_download_url": {
+    "type": "string",
+    "description": "FFmpeg \u4e0b\u8f7d\u5730\u5740\uff08\u53ef\u9009\uff09",
+    "hint": "\u652f\u6301 {os}/{arch}/{exeSuffix} \u5360\u4f4d\u7b26\uff1b\u4f8b\u5982 https://example.com/ffmpeg-{os}-{arch}{exeSuffix}.zip\uff0c\u7559\u7a7a\u65f6\u81ea\u52a8\u6d4b\u901f\u9ed8\u8ba4\u6e90\u3002",
+    "default": ""
+  },
+  "ffmpeg_sha256": {
+    "type": "string",
+    "description": "FFmpeg \u4e0b\u8f7d\u5305 SHA-256 \uff08\u53ef\u9009\uff09",
+    "hint": "\u586b\u5199 64 \u4f4d SHA-256 \u540e\u5c06\u5f3a\u5236\u6821\u9a8c\uff1b\u7559\u7a7a\u65f6\u5c1d\u8bd5\u8bfb\u53d6\u4e0b\u8f7d\u5730\u5740\u540e\u7f00 .sha256 \u7684\u6821\u9a8c\u6587\u4ef6\u3002",
+    "default": ""
+  },
+  "gpt_sovits": {
+    "type": "object",
+    "description": "GPT-SoVITS \u8bed\u97f3\u540e\u7aef",
+    "items": {
+      "api_base": {"type": "string", "description": "API \u5730\u5740", "default": "http://127.0.0.1:9880"},
+      "api_timeout_seconds": {"type": "int", "description": "API \u8d85\u65f6\uff08\u79d2\uff09", "default": 120}
+    }
+  },
+  "processing": {
+    "type": "object",
+    "description": "\u7d20\u6750\u5904\u7406\u9650\u5236",
+    "items": {
+      "max_upload_mb": {"type": "int", "description": "\u5355\u4e2a\u7d20\u6750\u6700\u5927\u4f53\u79ef\uff08MB\uff09", "default": 400},
+      "max_source_minutes": {"type": "int", "description": "\u7d20\u6750\u6700\u5927\u65f6\u957f\uff08\u5206\u949f\uff09", "default": 30},
+      "default_language": {"type": "string", "description": "\u9ed8\u8ba4\u8bad\u7ec3\u8bed\u8a00", "default": "zh", "options": ["zh", "ja", "en"]}
+    }
+  },
+  "speech_translation": {
+    "type": "object",
+    "description": "中文文字与日语语音",
+    "hint": "保留中文回复，并通过当前会话模型翻译为日语后生成语音。失败时仅发送中文。",
+    "items": {
+      "enabled": {"type": "bool", "description": "启用中文文字 + 日语语音", "default": true},
+      "target_language": {"type": "string", "description": "语音目标语言", "hint": "自动模式会读取当前 TTS Provider 的 text_lang；中文直接朗读，日语先翻译。", "default": "auto", "options": ["auto", "zh", "ja"]},
+      "timeout_seconds": {"type": "int", "description": "翻译超时（秒）", "default": 15},
+      "max_voice_chars": {"type": "int", "description": "单条语音最大字符数（超出按句切分，可发送多条）", "default": 300},
+      "clean_special_characters": {"type": "bool", "description": "清理特殊符号", "default": true},
+      "failure_policy": {"type": "string", "description": "失败处理", "default": "text_only", "options": ["text_only"]}
+    }
+  },
+  "automatic_cleanup": {
+    "type": "object",
+    "description": "历史素材自动清理",
+    "items": {
+      "enabled": {"type": "bool", "description": "启用定时智能清理", "default": true},
+      "retention_days": {"type": "int", "description": "历史素材保留天数", "default": 1},
+      "interval_hours": {"type": "int", "description": "检查间隔（小时）", "default": 24}
+    }
+  },
+  "require_voice_authorization": {
+    "type": "bool",
+    "description": "\u8981\u6c42\u786e\u8ba4\u58f0\u97f3\u6388\u6743",
+    "hint": "\u542f\u7528\u540e\uff0c\u672a\u786e\u8ba4\u62e5\u6709\u58f0\u97f3\u4f7f\u7528\u6743\u7684\u4efb\u52a1\u4e0d\u4f1a\u5f00\u59cb\u5904\u7406\u3002",
+    "default": true
+  }
+}

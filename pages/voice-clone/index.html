@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VoiceClone Flow</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main class="workspace">
+  <header class="page-header">
+    <h1>VoiceClone Flow</h1>
+    <span class="status" id="connectionStatus">正在读取 Provider</span>
+  </header>
+
+  <section class="section remote-panel" id="remotePanel">
+    <div class="section-heading"><div><h2>运行模式</h2><p>如果您使用的是轻量服务器，建议在此切换远程模式。</p></div><span class="status" id="remoteStatus">正在读取</span></div>
+    <div class="remote-controls">
+      <label class="field compact"><span>模式</span><select id="remoteMode"><option value="local">本地模式</option><option value="remote">远程连接模式</option></select></label>
+      <label class="field"><span>Studio 地址</span><input id="remoteBaseUrl" type="text" placeholder="http://服务器可访问的地址:端口"></label>
+      <label class="field"><span>Token</span><input id="remoteToken" type="text" spellcheck="false"></label>
+      <label class="field compact"><span>超时（秒）</span><input id="remoteTimeout" type="number" min="1" value="300"></label>
+    </div>
+    <div class="remote-actions"><button id="remoteTest" class="secondary" type="button">测试连接</button><button id="remoteSync" type="button">同步远程音色</button><span id="remoteMessage" role="status"></span></div>
+    <div id="remoteVoices" class="remote-voices" hidden></div>
+  </section>
+
+  <section class="runtime-bar" id="runtimeBar" data-local-only>
+    <div class="runtime-summary">
+      <strong>运行环境</strong>
+      <span class="resource-state" id="ffmpegState">FFmpeg 检查中</span>
+      <span class="resource-state" id="separatorState">人声分离模型检查中</span>
+      <span class="resource-state" id="ttsState">GPT-SoVITS TTS 检查中</span>
+      <button class="text-button" id="toggleRuntime" type="button" aria-expanded="false">管理</button>
+    </div>
+    <div class="runtime-details" id="runtimeDetails" hidden>
+      <div class="resource-row">
+        <div><strong>GPT-SoVITS TTS</strong><span id="gptState"></span><span id="gptMeta"></span><span id="gptPath"></span><div class="download-progress" id="gptProgressTrack" hidden><div id="gptProgressBar"></div></div><small id="gptProgress"></small></div>
+        <div class="resource-actions"><button id="installGpt" type="button">下载安装</button><button id="cancelGpt" class="secondary" type="button" hidden>取消</button><button id="startGpt" type="button">启动</button><button id="stopGpt" class="secondary" type="button" hidden>停止</button><button id="deleteGpt" class="danger" type="button">删除</button></div>
+      </div>
+      <div class="resource-row"><div><strong>FFmpeg</strong><span id="ffmpegPath"></span><div class="download-progress" id="ffmpegProgressTrack" hidden><div id="ffmpegProgressBar"></div></div><small id="ffmpegProgress"></small></div><div class="resource-actions"><button id="installFfmpeg" type="button">下载</button><button id="deleteFfmpeg" class="danger" type="button">删除</button></div></div>
+      <div class="resource-row"><div><strong>人声分离模型</strong><span id="separatorPath"></span><div class="download-progress" id="separatorProgressTrack" hidden><div id="separatorProgressBar"></div></div><small id="separatorProgress"></small></div><div class="resource-actions"><button id="installSeparator" type="button">下载</button><button id="deleteSeparator" class="danger" type="button">删除</button></div></div>
+      <div class="runtime-folder"><span>临时素材按配置自动清理，训练成果和已注册音色不会删除。</span></div>
+      <div class="runtime-manual-help" id="ffmpegManualHelp" hidden></div>
+      <div class="runtime-error" id="runtimeError" role="alert"></div>
+      <button class="text-button" id="refreshRuntime" type="button">重新检测</button>
+    </div>
+  </section>
+
+  <section class="section" id="localWorkspace" data-local-only>
+    <div class="section-heading"><div><h2>素材处理任务</h2><p>将任意格式的视频或音频处理为纯人声片段与文字对照，供 TTS 模型训练使用。</p></div><span class="phase-tag" id="taskState">未开始</span></div>
+    <form id="taskForm" class="task-form">
+      <label class="field"><span>视频或音频素材</span><input id="materialInput" type="file" accept="audio/*,video/*" required></label>
+      <label class="field compact"><span>ASR Provider</span><select id="providerSelect" disabled></select></label>
+      <label class="field compact"><span>语言</span><select id="language"><option value="zh">中文</option><option value="ja">日语</option><option value="en">英语</option></select></label>
+      <label class="authorization"><input id="authorized" type="checkbox">我确认拥有该声音的使用与克隆授权</label>
+      <button id="createTask" type="submit" disabled>开始处理</button>
+    </form>
+    <div id="taskError" class="notice" hidden></div>
+    <div id="segments" class="segments"><div class="empty-state">尚未生成片段</div></div>
+    <div class="dataset-actions"><button id="exportDataset" disabled>生成训练数据</button><span id="datasetResult"></span></div>
+    <div class="training-panel" id="trainingPanel" hidden>
+      <div class="training-form"><label class="field"><span>音色名称</span><input id="voiceName" type="text" maxlength="48"></label><button id="startTraining" type="button">开始训练</button></div>
+      <div class="preset-controls"><label>训练档位<select id="trainingPreset"><option value="light">轻量训练</option><option value="quick">快速训练</option><option value="standard" selected>标准训练</option><option value="enhanced">增强训练</option><option value="fine">精细训练</option><option value="custom">自定义</option></select></label><label>GPT Epoch<input id="gptEpochs" type="number" min="3" max="50" value="15"></label><label>SoVITS Epoch<input id="sovitsEpochs" type="number" min="5" max="150" value="30"></label></div>
+      <div class="training-status"><strong id="trainingState">等待开始</strong><span id="trainingDetail"></span><div class="training-metrics"><span id="epochMetric">Epoch --</span><span id="stepMetric">Step --</span><span id="speedMetric">-- step/s</span><span id="etaMetric">预计剩余 --</span></div><div class="training-progress"><div id="trainingProgressBar"></div></div></div>
+    </div>
+    <div class="provider-result" id="providerResult">
+      <div class="provider-header">
+        <div><h3>在 AstrBot 中使用音色</h3><p>选择训练完成的音色，调整参考信息后更新 AstrBot 的 GSV TTS(Local) Provider。</p></div>
+        <div class="provider-header-actions"><button id="refreshVoices" class="secondary compact-button" type="button">刷新音色</button><button id="openVoiceFolder" class="secondary compact-button" type="button">打开音色目录</button></div>
+      </div>
+      <label class="field compact provider-voice"><span>音色</span><select id="providerVoice"><option value="">正在读取...</option></select></label>
+      <dl class="provider-details"><dt>API Base URL</dt><dd id="providerApi"></dd><dt>GPT 模型</dt><dd id="providerGpt"></dd><dt>SoVITS 模型</dt><dd id="providerSovits"></dd><dt>语言</dt><dd id="providerLanguage"></dd></dl>
+      <div class="reference-editor">
+        <label class="field"><span>参考音频</span><input id="providerReference" type="text" spellcheck="false" placeholder="输入 WAV 文件绝对路径"></label>
+        <label class="field"><span>参考音频文本</span><textarea id="providerText" rows="2" placeholder="填写与参考音频完全一致的文本"></textarea></label>
+        <div class="reference-actions"><button id="saveProviderReference" class="secondary compact-button" type="button" disabled>保存参考信息</button><span id="referenceSaveResult" role="status"></span></div>
+      </div>
+      <div class="provider-actions"><button id="applyProvider" type="button" disabled>更新并启用此 TTS Provider</button><span id="providerActionResult" role="status"></span></div>
+      <div class="synthesis-test"><input id="synthesisText" type="text" placeholder="输入文本进行试听"><button id="synthesizeVoice" class="compact-button" type="button">生成试听</button><audio id="synthesisAudio" controls hidden></audio></div>
+    </div>
+  </section>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

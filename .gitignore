@@ -1,0 +1,27 @@
+# Local configuration and secrets
+data/config/
+data/frp/
+
+# Runtime state, logs, downloads, models, generated audio and tasks
+data/audio_cache/
+data/data/
+data/downloads/
+data/gpt_sovits/
+data/models/
+data/monitor/
+data/runtime/
+data/tasks/
+data/voices/
+data/provider_deliveries.json
+
+# Python and local environments
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
