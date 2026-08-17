@@ -1,4 +1,5 @@
-# Local configuration and secrets
+# Local configuration, runtime state and secrets
+data/*
 data/config/
 data/frp/
 
@@ -19,6 +20,7 @@ data/provider_deliveries.json
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.test-tmp/
 
 # Local editor and OS files
 .vscode/
