@@ -330,6 +330,12 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     def current() -> dict:
         return store.load()
 
+
+    def run_sync(func):
+        """把同步阻塞函数包装成异步，避免卡住事件循环。"""
+        async def wrapper(*args, **kwargs):
+            return await asyncio.to_thread(func, *args, **kwargs)
+        return wrapper
     def auth(authorization: str | None) -> None:
         expected = str(current().get("api_token", current().get("token", "")))
         supplied = (authorization or "").removeprefix("Bearer ").strip()
@@ -372,7 +378,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     @application.get("/api/voices")
     async def api_voices(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return {"voices": engine.list_voices()}
+        return {"voices": await run_sync(engine.list_voices)()}
 
     def provider_for_voice(voice_id: str) -> dict:
         asset = engine.get_voice(voice_id) if callable(getattr(engine, "get_voice", None)) else None
@@ -457,7 +463,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
         if not callable(getattr(engine, "create_voice", None)):
             raise HTTPException(status_code=503, detail="运行时不支持音色登记")
         try:
-            asset = engine.create_voice(payload)
+            asset = await run_sync(engine.create_voice)(payload)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"voice": asset.__dict__}
@@ -474,7 +480,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_reference(voice_id: str, payload: dict, authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            asset = engine.update_reference(voice_id, str(payload.get("reference_audio_path", "")), str(payload.get("reference_text", "")))
+            asset = await run_sync(engine.update_reference)(voice_id, str(payload.get("reference_audio_path", "")), str(payload.get("reference_text", "")))
         except (KeyError, FileNotFoundError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"voice": asset.__dict__}
@@ -482,7 +488,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     @application.get("/api/runtime/status")
     async def api_runtime_status(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return engine.runtime_status() if callable(getattr(engine, "runtime_status", None)) else {}
+        return await run_sync(engine.runtime_status)() if callable(getattr(engine, "runtime_status", None)) else {}
 
     @application.post("/api/config/asr")
     async def api_asr_config(payload: dict, authorization: str | None = Header(default=None)):
@@ -509,7 +515,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     @application.get("/api/tasks")
     async def api_tasks(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return {"tasks": engine.list_tasks()}
+        return {"tasks": await run_sync(engine.list_tasks)()}
 
     @application.post("/api/tasks")
     async def api_create_task(request: Request, authorization: str | None = Header(default=None)):
@@ -522,7 +528,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
         suffix = Path(filename).suffix.lower()
         if suffix not in {".wav", ".mp3", ".m4a", ".mp4", ".mpeg", ".webm", ".mov", ".mkv", ".flac", ".ogg"}:
             raise HTTPException(status_code=415, detail="不支持该素材格式")
-        task = engine.create_task(filename)
+        task = await run_sync(engine.create_task)(filename)
         root = project_root / "data" / "sessions" / task.id
         root.mkdir(parents=True, exist_ok=True)
         source = root / f"source{suffix}"
@@ -540,7 +546,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_task(task_id: str, authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.task_detail(task_id)
+            return await run_sync(engine.task_detail)(task_id)
         except (ValueError, FileNotFoundError):
             raise HTTPException(status_code=404, detail="任务不存在") from None
 
@@ -558,7 +564,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_task_dataset(task_id: str, payload: dict, authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.export_dataset(task_id, list(payload.get("segments", [])))
+            return await run_sync(engine.export_dataset)(task_id, list(payload.get("segments", [])))
         except (ValueError, KeyError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -566,7 +572,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_task_train(task_id: str, payload: dict, authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return {"voice": engine.train_task(task_id, str(payload.get("name", "")).strip(), str(payload.get("language", "zh")), int(payload.get("gpt_epochs", 15)), int(payload.get("sovits_epochs", 30)))}
+            return {"voice": await run_sync(engine.train_task)(task_id, str(payload.get("name", "")).strip(), str(payload.get("language", "zh")), int(payload.get("gpt_epochs", 15)), int(payload.get("sovits_epochs", 30)))}
         except (RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -574,7 +580,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_ffmpeg_install(authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.install_ffmpeg()
+            return await run_sync(engine.install_ffmpeg)()
         except (RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -582,7 +588,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_separator_install(authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.install_separator()
+            return await run_sync(engine.install_separator)()
         except (RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -590,7 +596,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_gpt_install(payload: dict | None = None, authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.install_gpt(str((payload or {}).get("url", "")))
+            return await run_sync(engine.install_gpt)(str((payload or {}).get("url", "")))
         except (RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -598,19 +604,19 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_gpt_start(authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return engine.start_gpt()
+            return await run_sync(engine.start_gpt)()
         except Exception as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @application.post("/api/gpt-sovits/stop")
     async def api_gpt_stop(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return engine.stop_gpt()
+        return await run_sync(engine.stop_gpt)()
 
     @application.get("/api/frp/status")
     async def api_frp_status(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return {"frp": frpc.status(), "config": store.public()}
+        return {"frp": await run_sync(frpc.status)(), "config": store.public()}
 
     def voice_service_status() -> dict:
         runtime_status = engine.runtime_status()
@@ -618,12 +624,22 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
         frp = frpc.status()
         gpt_running = bool(service.get("service_running"))
         enabled = gpt_running and bool(frp.get("connected"))
+        frp_running = bool(frp.get("running"))
+        frp_connected = bool(frp.get("connected"))
         if enabled:
             phase, message = "ready", "语音服务已开启，AstrBot 可以访问本机推理。"
         elif bool(frp.get("conflict")):
             phase, message = "conflict", str(frp.get("message") or "FRPC 发生实例冲突。")
-        elif gpt_running or bool(frp.get("running")):
-            phase, message = "starting", "语音服务正在启动，请等待 GPT-SoVITS 与 FRPC 都就绪。"
+        elif gpt_running and frp_running and not frp_connected:
+            phase, message = "starting", "GPT-SoVITS 已启动，等待 FRPC 连接服务器…"
+        elif gpt_running and not frp_running:
+            phase, message = "starting", "GPT-SoVITS 已启动，请启动 FRPC 隧道。"
+        elif not gpt_running and frp_running and not frp_connected:
+            phase, message = "degraded", "FRPC 在运行但未连接，且 GPT-SoVITS 未启动。请重新启动语音服务。"
+        elif not gpt_running and frp_connected:
+            phase, message = "degraded", "隧道已连接，但 GPT-SoVITS 未启动。请在「运行环境」页启动推理服务。"
+        elif frp_running:
+            phase, message = "starting", "语音服务正在启动，请等待就绪。"
         else:
             phase, message = "stopped", "语音服务已关闭，Studio 页面仍保持在线。"
         return {"enabled": enabled, "phase": phase, "message": message, "gpt": service, "frp": frp, "config": store.public()}
@@ -631,19 +647,22 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     @application.get("/api/voice-service/status")
     async def api_voice_service_status(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return voice_service_status()
+        return await run_sync(voice_service_status)()
 
     @application.post("/api/voice-service/start")
     async def api_voice_service_start(authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            engine.start_gpt()
-            frpc.prepare(current())
-            frpc.start()
-            return voice_service_status()
+            current_status = await run_sync(frpc.status)()
+            if current_status.get("running") and not current_status.get("connected"):
+                await run_sync(frpc.stop)()
+            await run_sync(engine.start_gpt)()
+            await run_sync(frpc.prepare)(current())
+            await run_sync(frpc.start)()
+            return await run_sync(voice_service_status)()
         except Exception as exc:
             try:
-                engine.stop_gpt()
+                await run_sync(engine.stop_gpt)()
             except Exception:
                 pass
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -653,14 +672,14 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
         auth(authorization)
         errors = []
         try:
-            frpc.stop()
+            await run_sync(frpc.stop)()
         except Exception as exc:
             errors.append(f"FRPC：{exc}")
         try:
-            engine.stop_gpt()
+            await run_sync(engine.stop_gpt)()
         except Exception as exc:
             errors.append(f"GPT-SoVITS：{exc}")
-        result = voice_service_status()
+        result = await run_sync(voice_service_status)()
         if errors:
             result["phase"] = "error"
             result["message"] = "；".join(errors)
@@ -671,7 +690,7 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
         auth(authorization)
         try:
             store.save(payload)
-            return {"frp": frpc.prepare(store.load())}
+            return {"frp": await run_sync(frpc.prepare)(store.load())}
         except (ValueError, RuntimeError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -679,14 +698,14 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
     async def api_frp_start(authorization: str | None = Header(default=None)):
         auth(authorization)
         try:
-            return {"frp": frpc.start()}
+            return {"frp": await run_sync(frpc.start)()}
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.post("/api/frp/stop")
     async def api_frp_stop(authorization: str | None = Header(default=None)):
         auth(authorization)
-        return {"frp": frpc.stop()}
+        return {"frp": await run_sync(frpc.stop)()}
 
     @application.get("/api/monitor/requests")
     async def api_monitor_requests(limit: int = 100, authorization: str | None = Header(default=None)):
@@ -823,9 +842,15 @@ def create_app(*, root: Path | None = None, config_store=None, runtime=None, frp
 
     @application.get("/", response_class=FileResponse)
     async def api_index():
-        return FileResponse(project_root / "pages" / "studio-v2.html")
+        return FileResponse(project_root / "pages" / "studio-v3.html")
 
     return application
 
 
 app = create_app()
+
+
+
+
+
+
