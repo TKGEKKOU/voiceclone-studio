@@ -34,6 +34,7 @@ strong{color:var(--text)}
 .status-pill{padding:4px 10px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;background:var(--bg2);color:var(--text3);border:1px solid var(--border);border-radius:4px}
 .status-pill.ok{background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,.2)}.status-pill.busy{background:var(--amber-bg);color:var(--amber);border-color:rgba(255,171,0,.2)}.status-pill.bad{background:var(--red-bg);color:var(--red);border-color:rgba(255,61,61,.2)}
 .service-hero{background:linear-gradient(135deg,var(--surface),rgba(0,212,255,.02))}
+.global-service{margin:28px 0 36px;padding:30px 34px;border-color:var(--border-hi);box-shadow:0 18px 50px rgba(0,0,0,.18)}
 .service-control{display:flex;align-items:center;gap:16px;padding:16px 0 20px;border-bottom:1px solid var(--border)}
 .service-orb{width:42px;height:42px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);display:grid;place-items:center;transition:all .4s}
 .service-orb span{width:13px;height:13px;border-radius:50%;background:#334455;transition:all .4s}
@@ -133,6 +134,13 @@ select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
     <div class="metric"><span class="metric-label">本地音色</span><span class="metric-value"><i id="dotVoices" class="dot"></i><span id="stateVoices">检查中</span></span></div>
   </section>
 
+  <section class="panel service-hero global-service">
+    <div class="panel-head"><div><h2>语音服务总开关</h2><p>一键启动或停止 GPT-SoVITS、FRP 与远程连接，Studio 页面始终保持在线。</p></div><span id="servicePill" class="status-pill">检查中</span></div>
+    <div class="service-control"><div class="service-orb" id="serviceOrb"><span></span></div><div class="service-copy"><strong id="serviceState">语音服务未启动</strong><span id="serviceMessage">正在检查。</span></div><button id="voiceServiceToggle" class="btn service-toggle">开启语音服务</button></div>
+    <div class="service-stages"><div id="serviceStageGpt" class="service-stage"><span class="stage-mark">1</span><div><strong>GPT-SoVITS</strong><small>推理服务</small></div></div><div id="serviceStageFrp" class="service-stage"><span class="stage-mark">2</span><div><strong>FRPC</strong><small>内网隧道</small></div></div><div id="serviceStageRemote" class="service-stage"><span class="stage-mark">3</span><div><strong>AstrBot</strong><small>远程可用</small></div></div></div>
+    <details class="advanced"><summary>服务器插件页面填写什么</summary><div class="setup-guide"><p>在 AstrBot 插件中选择<strong>远程模式</strong>，Studio 地址填写服务器映射地址：</p><div class="copy-line"><code id="pluginAddressGuide">http://127.0.0.1:19090</code><button id="copyPluginAddress" class="btn secondary">复制地址</button></div><p>Studio Token 与本页 Studio Token 保持一致。FRP Token 只用于 FRPC 连接服务器，不能当作 Studio Token。</p></div></details>
+  </section>
+
   <nav class="tabs" aria-label="工作区">
     <button class="tab active" data-tab="connect">连接 AstrBot</button>
     <button class="tab" data-tab="monitor">实时监控</button>
@@ -142,12 +150,6 @@ select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
   </nav>
 
   <section id="view-connect" class="view active">
-    <div class="panel service-hero">
-      <div class="panel-head"><div><h2>语音服务总开关</h2><p>一次操作启动或停止 GPT-SoVITS 与 FRPC。Studio 页面始终保持在线。</p></div><span id="servicePill" class="status-pill">检查中</span></div>
-      <div class="service-control"><div class="service-orb" id="serviceOrb"><span></span></div><div class="service-copy"><strong id="serviceState">语音服务未启动</strong><span id="serviceMessage">正在检查。</span></div><button id="voiceServiceToggle" class="btn service-toggle">开启语音服务</button></div>
-      <div class="service-stages"><div id="serviceStageGpt" class="service-stage"><span class="stage-mark">1</span><div><strong>GPT-SoVITS</strong><small>推理服务</small></div></div><div id="serviceStageFrp" class="service-stage"><span class="stage-mark">2</span><div><strong>FRPC</strong><small>内网隧道</small></div></div><div id="serviceStageRemote" class="service-stage"><span class="stage-mark">3</span><div><strong>AstrBot</strong><small>远程可用</small></div></div></div>
-      <details class="advanced"><summary>服务器插件页面填写什么</summary><div class="setup-guide"><p>在 AstrBot 插件中选择<strong>远程模式</strong>，Studio 地址填写服务器映射地址：</p><div class="copy-line"><code id="pluginAddressGuide">http://127.0.0.1:19090</code><button id="copyPluginAddress" class="btn secondary">复制地址</button></div><p>Studio Token 与本页 Studio Token 保持一致。FRP Token 只用于 FRPC 连接服务器，不能当作 Studio Token。</p></div></details>
-    </div>
     <div class="panel">
       <div class="panel-head"><div><h2>连接 AstrBot</h2><p>Studio 通过 FRPC 主动连接服务器。完成后，服务器插件使用映射地址访问本机推理服务。</p></div><span id="connectPill" class="status-pill">尚未检查</span></div>
       <div class="workflow-guide"><div class="workflow-guide-item"><b class="workflow-guide-num">1</b><div><strong>填入并保存鉴权</strong><small>Studio Token 要和服务器插件一致。</small></div></div><div class="workflow-guide-item"><b class="workflow-guide-num">2</b><div><strong>填入服务器参数</strong><small>FRP Token 要和服务器 frps 一致。</small></div></div><div class="workflow-guide-item"><b class="workflow-guide-num">3</b><div><strong>准备并启动隧道</strong><small>先保存参数，再启动 FRPC。</small></div></div><div class="workflow-guide-item"><b class="workflow-guide-num">4</b><div><strong>复制地址到插件</strong><small>连接成功后再保存远程模式。</small></div></div></div>
