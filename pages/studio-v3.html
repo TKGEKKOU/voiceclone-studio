@@ -398,8 +398,8 @@ $('refreshVoices').onclick=()=>voices();$('openVoices').onclick=()=>action($('op
 async function refreshAll(){await health();if(!token)return;await Promise.allSettled([runtime(),frp(),voices(),refreshTask(),refreshDelivery(),refreshMonitor()]);connectMonitorStream()}refreshAll();poller=setInterval(()=>{runtime();frp();if(currentTask)refreshTask();if(deliveryTask)refreshDelivery();refreshMonitor()},4000);window.addEventListener('beforeunload',()=>clearInterval(poller));
 async function voiceService(){try{const d=await api('/api/voice-service/status'),f=d.frp||{},g=d.gpt||{},c=d.config||{},phase=d.phase||'stopped',enabled=!!d.enabled;state.frp=f;$('pluginAddressGuide').textContent=`http://127.0.0.1:${c.frp_remote_port||f.remote_port||19090}`;
 const canToggle=phase!=='starting';$('voiceServiceToggle').textContent=enabled?'关闭语音服务':phase==='degraded'?'重新启动语音服务':'开启语音服务';$('voiceServiceToggle').disabled=!canToggle;
-const stateText={ready:'语音服务已开启',conflict:'需要处理 FRPC 冲突',starting:'语音服务启动中',degraded:'语音服务需要处理',stopped:'语音服务未启动'};$('serviceState').textContent=stateText[phase]||'语音服务未启动';
-$('serviceMessage').textContent=d.message||'';
+const stateText={ready:'语音服务已开启',conflict:'需要处理 FRPC 冲突',starting:'语音服务启动中',degraded:'语音服务需要处理',stopped:'语音服务未启动'};const serviceText=stateText[phase]||'语音服务未启动';$('serviceState').textContent=serviceText;if($('serviceState2'))$('serviceState2').textContent=serviceText;
+$('serviceMessage').textContent=d.message||'';if($('serviceMessage2'))$('serviceMessage2').textContent=d.message||'';
 pill('servicePill',{ready:'已开启',conflict:'有冲突',starting:'启动中',degraded:'需要关注',stopped:'已关闭'}[phase]||'已关闭',{ready:'ok',conflict:'bad',starting:'busy',degraded:'busy',stopped:''}[phase]||'');
 $('serviceOrb').className=`service-orb ${{ready:'ok',conflict:'bad',starting:'busy',degraded:'busy'}[phase]||''}`;
 const gptDone=!!g.service_running,frpDone=!!f.connected,gptCurrent=phase==='starting'&&!gptDone,frpCurrent=!!f.running&&!frpDone;
