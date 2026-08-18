@@ -18,10 +18,6 @@ code,pre{font-family:var(--mono);font-size:12px}
 strong{color:var(--text)}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 28px 0}
 .topbar .brand p{color:var(--text3);font-size:12px;margin-top:2px}
-.hero-status{text-align:center;padding:0 0 8px;margin-top:-2px}
-.hero-status strong{font-size:15px;display:block;margin-bottom:4px}
-.hero-status span{font-size:12px;color:var(--text3)}
-.hero-btn{text-align:center;padding:4px 0 12px}
 .overview{display:flex;gap:1px;background:var(--border);margin:24px 0 0;border-radius:4px;overflow:hidden}
 .metric{flex:1;padding:12px 16px;background:var(--bg2)}
 .metric-label{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
@@ -46,6 +42,7 @@ strong{color:var(--text)}
 .service-orb.bad{border-color:var(--red);box-shadow:0 0 20px rgba(255,61,61,.15)}.service-orb.bad span{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .service-copy{display:grid;gap:2px;min-width:0;flex:1}.service-copy strong{font-size:15px;color:#fff}.service-copy span{font-size:12px;color:var(--text3)}
+.service-toggle{min-width:160px;flex:0 0 auto}
 .service-stages{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
 .service-stage{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid var(--border);background:var(--bg2);border-radius:6px;transition:all .3s}
 .service-stage.done{border-color:rgba(0,230,118,.3);background:var(--green-bg)}.service-stage.current{border-color:rgba(255,171,0,.3);background:var(--amber-bg)}.service-stage.bad{border-color:rgba(255,61,61,.2);background:var(--red-bg)}
@@ -115,7 +112,7 @@ select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
 .action-hint{font-size:12px;color:var(--text3);margin-top:8px}
 .server-result{margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
 @media(max-width:900px){.grid,.train-layout,.provider-layout{grid-template-columns:1fr}.service-stages,.pipeline-track,.flow,.delivery-flow,.workflow-guide{grid-template-columns:1fr}.resource{grid-template-columns:1fr}.monitor-row{grid-template-columns:60px 1fr 80px}.overview{flex-wrap:wrap}.metric{min-width:45%}}
-@media(max-width:600px){canvas#bg3d{height:128px}.topbar{padding-inline:16px}.shell{padding-inline:16px}.panel{padding:20px}}
+@media(max-width:600px){canvas#bg3d{height:128px}.topbar{padding-inline:16px}.shell{padding-inline:16px}.panel{padding:20px}.service-control{align-items:flex-start;flex-wrap:wrap}.service-copy{padding-top:2px}.service-toggle{width:100%;margin-left:58px}}
 
 </style>
 </head>
@@ -126,14 +123,6 @@ select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
 </div>
 
 <canvas id="bg3d"></canvas>
-
-<div class="hero-status">
-  <strong id="serviceState">语音服务未启动</strong>
-  <span id="serviceMessage">正在检查本机运行状态。</span>
-</div>
-<div class="hero-btn">
-  <button id="voiceServiceToggle" class="btn" style="min-width:180px">开启语音服务</button>
-</div>
 
 <main class="shell">
   <section class="overview">
@@ -155,7 +144,7 @@ select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
   <section id="view-connect" class="view active">
     <div class="panel service-hero">
       <div class="panel-head"><div><h2>语音服务总开关</h2><p>一次操作启动或停止 GPT-SoVITS 与 FRPC。Studio 页面始终保持在线。</p></div><span id="servicePill" class="status-pill">检查中</span></div>
-      <div class="service-control"><div class="service-orb" id="serviceOrb"><span></span></div><div class="service-copy"><strong id="serviceState2">语音服务未启动</strong><span id="serviceMessage2">正在检查。</span></div></div>
+      <div class="service-control"><div class="service-orb" id="serviceOrb"><span></span></div><div class="service-copy"><strong id="serviceState">语音服务未启动</strong><span id="serviceMessage">正在检查。</span></div><button id="voiceServiceToggle" class="btn service-toggle">开启语音服务</button></div>
       <div class="service-stages"><div id="serviceStageGpt" class="service-stage"><span class="stage-mark">1</span><div><strong>GPT-SoVITS</strong><small>推理服务</small></div></div><div id="serviceStageFrp" class="service-stage"><span class="stage-mark">2</span><div><strong>FRPC</strong><small>内网隧道</small></div></div><div id="serviceStageRemote" class="service-stage"><span class="stage-mark">3</span><div><strong>AstrBot</strong><small>远程可用</small></div></div></div>
       <details class="advanced"><summary>服务器插件页面填写什么</summary><div class="setup-guide"><p>在 AstrBot 插件中选择<strong>远程模式</strong>，Studio 地址填写服务器映射地址：</p><div class="copy-line"><code id="pluginAddressGuide">http://127.0.0.1:19090</code><button id="copyPluginAddress" class="btn secondary">复制地址</button></div><p>Studio Token 与本页 Studio Token 保持一致。FRP Token 只用于 FRPC 连接服务器，不能当作 Studio Token。</p></div></details>
     </div>
@@ -398,8 +387,8 @@ $('refreshVoices').onclick=()=>voices();$('openVoices').onclick=()=>action($('op
 async function refreshAll(){await health();if(!token)return;await Promise.allSettled([runtime(),frp(),voices(),refreshTask(),refreshDelivery(),refreshMonitor()]);connectMonitorStream()}refreshAll();poller=setInterval(()=>{runtime();frp();if(currentTask)refreshTask();if(deliveryTask)refreshDelivery();refreshMonitor()},4000);window.addEventListener('beforeunload',()=>clearInterval(poller));
 async function voiceService(){try{const d=await api('/api/voice-service/status'),f=d.frp||{},g=d.gpt||{},c=d.config||{},phase=d.phase||'stopped',enabled=!!d.enabled;state.frp=f;$('pluginAddressGuide').textContent=`http://127.0.0.1:${c.frp_remote_port||f.remote_port||19090}`;
 const canToggle=phase!=='starting';$('voiceServiceToggle').textContent=enabled?'关闭语音服务':phase==='degraded'?'重新启动语音服务':'开启语音服务';$('voiceServiceToggle').disabled=!canToggle;
-const stateText={ready:'语音服务已开启',conflict:'需要处理 FRPC 冲突',starting:'语音服务启动中',degraded:'语音服务需要处理',stopped:'语音服务未启动'};const serviceText=stateText[phase]||'语音服务未启动';$('serviceState').textContent=serviceText;if($('serviceState2'))$('serviceState2').textContent=serviceText;
-$('serviceMessage').textContent=d.message||'';if($('serviceMessage2'))$('serviceMessage2').textContent=d.message||'';
+const stateText={ready:'语音服务已开启',conflict:'需要处理 FRPC 冲突',starting:'语音服务启动中',degraded:'语音服务需要处理',stopped:'语音服务未启动'};const serviceText=stateText[phase]||'语音服务未启动';$('serviceState').textContent=serviceText;
+$('serviceMessage').textContent=d.message||'';
 pill('servicePill',{ready:'已开启',conflict:'有冲突',starting:'启动中',degraded:'需要关注',stopped:'已关闭'}[phase]||'已关闭',{ready:'ok',conflict:'bad',starting:'busy',degraded:'busy',stopped:''}[phase]||'');
 $('serviceOrb').className=`service-orb ${{ready:'ok',conflict:'bad',starting:'busy',degraded:'busy'}[phase]||''}`;
 const gptDone=!!g.service_running,frpDone=!!f.connected,gptCurrent=phase==='starting'&&!gptDone,frpCurrent=!!f.running&&!frpDone;
@@ -410,7 +399,7 @@ function renderPipeline(rows){const row=rows&&rows[0];const labels=['文本已�
 function renderPipelineGraph(rows){const row=rows&&rows[0];const stages={received:0,translating:1,translated:1,synthesizing:2,generated:3,downloaded:4,expired:4,failed:-1};const index=row&&Object.prototype.hasOwnProperty.call(stages,row.stage)?stages[row.stage]:-2;for(let i=1;i<=5;i++){const node=$(`pipelineNode${i}`);if(!node)continue;const state=!row?'':index===-1?'failed':i-1<index?'done':i-1===index?'current':'';node.setAttribute('class',`pipeline-node ${state}`)}const progress=$('pipelineProgress');if(progress){progress.style.strokeDasharray=index<0?'0 1000':`${Math.max(0,Math.min(4,index))*210+20} 1000`;progress.style.opacity=index<0?'0':index===4?'1':'.85'}}
 const _renderMonitor=renderMonitor;renderMonitor=function(rows){renderPipeline(rows);renderPipelineGraph(rows);return _renderMonitor(rows)};
 $('copyPluginAddress').onclick=async()=>{await navigator.clipboard.writeText($('pluginAddressGuide').textContent);toast('服务器插件地址已复制','ok')};
-voiceService();setInterval(voiceService,2000);$('voiceServiceToggle').onclick=async()=>{const cur=state.lastSvcResult||{};const phase=cur.phase||'stopped';const wasEnabled=!!cur.enabled;const shouldStop=wasEnabled;const label=shouldStop?'关闭中…':phase==='degraded'?'重新启动中…':'启动中…';try{await busy($('voiceServiceToggle'),label,async()=>{if(shouldStop){await api('/api/voice-service/stop',{method:'POST'});await new Promise(r=>setTimeout(r,1000))}await api('/api/voice-service/start',{method:'POST'});await voiceService();await runtime()});toast(shouldStop?'语音服务已关闭':'语音服务已开启','ok')}catch(e){toast(e.message,'bad')}};
+voiceService();setInterval(voiceService,2000);$('voiceServiceToggle').onclick=async()=>{const cur=state.lastSvcResult||{};const phase=cur.phase||'stopped';const shouldStop=!!cur.enabled;const label=shouldStop?'关闭中…':phase==='degraded'?'重新启动中…':'启动中…';try{await busy($('voiceServiceToggle'),label,async()=>{if(shouldStop){await api('/api/voice-service/stop',{method:'POST'});await new Promise(r=>setTimeout(r,1000))}else{await api('/api/voice-service/start',{method:'POST'})}await voiceService();await runtime()});toast(shouldStop?'语音服务已关闭':'语音服务已开启','ok')}catch(e){toast(e.message,'bad')}};
 
 
 
